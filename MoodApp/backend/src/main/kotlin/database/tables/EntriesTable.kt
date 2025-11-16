@@ -10,7 +10,7 @@ object EntriesTable : LongIdTable("entries") {
     val title = varchar("title", 200)
     val content = text("content")
     val moodRating = integer("mood_rating").nullable()
-    val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp) // wird von DB gesetzt
+    val createdAt = timestamp("created_at")         // KxInstant
     val updatedAt = timestamp("updated_at").nullable()
 
     init {

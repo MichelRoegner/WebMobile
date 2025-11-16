@@ -14,14 +14,12 @@ class UserDAO(id: EntityID<Long>) : LongEntity(id) {
     var username by UsersTable.username
     var email by UsersTable.email
     var passwordHash by UsersTable.passwordHash
-    var registrationDate by UsersTable.registrationDate   // kotlinx.datetime.LocalDate
+    var registrationDate by UsersTable.registrationDate
     var isActive by UsersTable.isActive
-    var createdAt by UsersTable.createdAt                  // kotlinx.datetime.Instant
+    var createdAt by UsersTable.createdAt
 
-    // Relation: 1:n – Einträge dieses Users
     val entries by EntryDAO referrersOn EntriesTable.userId
 
-    // DAO -> Domain Model (Typ-Konvertierung LocalDate(kotlinx) -> LocalDate(java))
     fun toModel(): model.User =
         model.User(
             id = model.UserId(id.value),

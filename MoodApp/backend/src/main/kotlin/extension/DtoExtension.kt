@@ -4,6 +4,7 @@ import dto.EntryDto
 import dto.UserDto
 import model.Entry
 import model.User
+import kotlin.time.ExperimentalTime
 
 fun User.toDto(): UserDto =
     UserDto(
@@ -13,6 +14,7 @@ fun User.toDto(): UserDto =
         registrationDate = this.registrationDate.toString(), // ISO-8601
         isActive = this.isActive
     )
+@OptIn(ExperimentalTime::class)
 fun Entry.toDto() = EntryDto(
     id = id.value,
     userId = userId.value,

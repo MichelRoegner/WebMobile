@@ -10,7 +10,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import model.EntryId
 import model.UserId
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalTime::class)
 fun Route.entryRoutes(repo: MoodTrackerDatabaseRepository) {
 
     route("/api/users/{userId}/entries") {
@@ -31,6 +34,7 @@ fun Route.entryRoutes(repo: MoodTrackerDatabaseRepository) {
             if (req.moodRating != null && (req.moodRating !in 1..10))
                 return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "moodRating 1..10"))
 
+
             val created = repo.createEntry(
                 model.Entry(
                     id = EntryId(0),
@@ -38,7 +42,7 @@ fun Route.entryRoutes(repo: MoodTrackerDatabaseRepository) {
                     title = req.title,
                     content = req.content,
                     moodRating = req.moodRating,
-                    createdAt = java.time.LocalDateTime.now(),
+                    createdAt = Clock.System.now(),
                     updatedAt = null
                 )
             )

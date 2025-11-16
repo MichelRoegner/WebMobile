@@ -1,5 +1,5 @@
-import database.DatabaseFactory
 import database.MoodTrackerDatabaseRepository
+import di.appModule
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -8,20 +8,17 @@ import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
+import org.kodein.di.instance
+import org.kodein.di.ktor.closestDI
+import org.kodein.di.ktor.di
 import routes.entryRoutes
 import routes.userRoutes
 
-
-fun configureDatabases() {
-    DatabaseFactory.init()
-}
-
-fun main() {
-    embeddedServer(Netty, port = 8080) {
-        configureDatabases()
-        configureRouting()
-        configureSerialization()
-    }.start(wait = true)
+// DI-Konfiguration
+fun Application.configureDI() {
+    di {
+        import(appModule)
+    }
 }
 
 fun Application.configureSerialization() {
@@ -36,11 +33,21 @@ fun Application.configureSerialization() {
     }
     install(CallLogging)
 }
+
 fun Application.configureRouting() {
-    val repository = MoodTrackerDatabaseRepository()
+    val di by closestDI()
+    val repository by di.instance<MoodTrackerDatabaseRepository>()
 
     routing {
         userRoutes(repository)
         entryRoutes(repository)
     }
+}
+
+fun main() {
+    embeddedServer(Netty, port = 8080) {
+        configureDI()            // DI zuerst
+        configureSerialization()
+        configureRouting()
+    }.start(wait = true)
 }

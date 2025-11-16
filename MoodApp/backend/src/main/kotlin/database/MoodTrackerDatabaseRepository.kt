@@ -1,17 +1,19 @@
 package database
 
-import database.dao.EntryDAO
 import database.dao.UserDAO
 import database.tables.EntriesTable
+import model.User
+import model.UserId
+import model.Entry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
-import model.User
-import model.UserId
+import model.EntryId
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.time.ExperimentalTime
+import kotlin.time.Clock
 
 
 @OptIn(ExperimentalTime::class)
@@ -30,8 +32,6 @@ class MoodTrackerDatabaseRepository {
         UserDAO.findById(id.value)?.toModel()
     }
 
-
-
     @OptIn(kotlin.time.ExperimentalTime::class)
     fun createUser(user: User): User = transaction {
         val src: java.time.LocalDate = user.registrationDate ?: java.time.LocalDate.now()
@@ -46,9 +46,6 @@ class MoodTrackerDatabaseRepository {
         }
         dao.toModel()
     }
-
-
-
     suspend fun deleteUser(id: UserId): Boolean = newSuspendedTransaction(Dispatchers.IO) {
         UserDAO.findById(id.value)?.let { dao ->
             dao.delete()
@@ -59,43 +56,48 @@ class MoodTrackerDatabaseRepository {
     /* ====================== ENTRIES ====================== */
 
     // CREATE
-    fun createEntry(entry: model.Entry): model.Entry = transaction {
+    fun createEntry(entry: Entry): Entry = transaction {
         val userDao = UserDAO.findById(entry.userId.value)
             ?: throw IllegalArgumentException("User ${entry.userId.value} not found")
+
         val dao = EntryDAO.new {
             user = userDao
             title = entry.title
             content = entry.content
             moodRating = entry.moodRating
-            updatedAt = null
+            createdAt = entry.createdAt.toDbInstant()      // Kt -> Kx
+            updatedAt = entry.updatedAt?.toDbInstant()
         }
+        dao.toModel()
+    }
+
+    // UPDATE
+    fun updateEntry(entry: Entry): Entry = transaction {
+        val dao = EntryDAO.findById(entry.id.value)
+            ?: throw IllegalArgumentException("Entry ${entry.id.value} not found")
+
+        dao.title = entry.title
+        dao.content = entry.content
+        dao.moodRating = entry.moodRating
+        dao.updatedAt = Clock.System.now().toDbInstant()  // Kt -> Kx
+
         dao.toModel()
     }
 
 
 
-    fun findAllEntries(userId: model.UserId): List<model.Entry> = transaction {
+    fun findAllEntries(userId: UserId): List<Entry> = transaction {
         EntryDAO.find { EntriesTable.userId eq userId.value }
             .orderBy(EntriesTable.id to SortOrder.DESC)
             .map { it.toModel() }  // toModel liest createdAt NICHT aus der DB
     }
 
     // READ by id
-    fun findEntryById(entryId: model.EntryId): model.Entry? = transaction {
+    fun findEntryById(entryId: EntryId): Entry? = transaction {
         EntryDAO.findById(entryId.value)?.toModel()
     }
 
-    // UPDATE (setzt updatedAt)
-    fun updateEntry(entry: model.Entry): model.Entry = transaction {
-        val dao = EntryDAO.findById(entry.id.value)
-            ?: throw IllegalArgumentException("Entry ${entry.id.value} not found")
 
-        entry.title.let { dao.title = it }
-        entry.content.let { dao.content = it }
-        dao.moodRating = entry.moodRating
-        //dao.updatedAt = Clock.System.now()          // Muss noch angepasst werden
-        dao.toModel()
-    }
 
     // DELETE
     fun deleteEntry(entryId: model.EntryId): Boolean = transaction {
